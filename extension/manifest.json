@@ -1,0 +1,28 @@
+{
+  "manifest_version": 2,
+  "name": "FocusReward",
+  "version": "0.1.0",
+  "description": "Blocks distracting websites until you earn enough points by completing tasks.",
+  "permissions": [
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "scripts": [
+      "webextension-polyfill.js",
+      "config.js",
+      "background.js"
+    ],
+    "persistent": true
+  },
+  "browser_action": {
+    "default_title": "FocusReward",
+    "default_popup": "focus.html"
+  },
+  "icons": {
+    "32": "icons/32.png",
+    "128": "icons/128.png"
+  }
+}
