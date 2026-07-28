@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { api, RewardSite, PointBalance, ActiveUnlock } from '@/lib/api'
+import Layout from '@/components/Layout'
 
 export default function RewardsPage() {
   const [sites, setSites] = useState<RewardSite[]>([])
   const [balance, setBalance] = useState<PointBalance | null>(null)
   const [activeUnlocks, setActiveUnlocks] = useState<ActiveUnlock[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [unlockingId, setUnlockingId] = useState<string | null>(null)
+  const [tick, setTick] = useState(0)
 
   const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const [s, b, u] = await Promise.all([
         api.getSites(),
@@ -19,14 +23,19 @@ export default function RewardsPage() {
       setSites(s)
       setBalance(b)
       setActiveUnlocks(u)
-    } catch (e) {
-      console.error(e)
+    } catch {
+      setError("Can't reach the FocusReward server. Is the app running?")
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const unlock = async (siteId: string) => {
     setUnlockingId(siteId)
@@ -58,6 +67,13 @@ export default function RewardsPage() {
 
   return (
     <Layout balance={balance?.balance ?? 0}>
+      {error && (
+        <div className="error-banner">
+          <p>{error}</p>
+          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+        </div>
+      )}
+
       <div className="card">
         <h2>Reward Sites</h2>
         {sites.length === 0 ? (
@@ -88,6 +104,11 @@ export default function RewardsPage() {
                   >
                     {unlockingId === site.id ? '...' : 'Unlock'}
                   </button>
+                  {insufficientBalance && (
+                    <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                      Not enough points
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -95,21 +116,5 @@ export default function RewardsPage() {
         )}
       </div>
     </Layout>
-  )
-}
-
-function Layout({ children, balance }: { children: React.ReactNode; balance: number }) {
-  return (
-    <>
-      <nav>
-        <h1>FocusReward</h1>
-        <Link href="/">Tasks</Link>
-        <Link href="/rewards">Rewards</Link>
-        <Link href="/history">History</Link>
-        <Link href="/settings">Settings</Link>
-        <div className="balance">{balance} pts</div>
-      </nav>
-      <main>{children}</main>
-    </>
   )
 }

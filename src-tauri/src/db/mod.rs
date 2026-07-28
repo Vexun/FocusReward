@@ -109,6 +109,7 @@ impl Database {
     pub fn create_todo(&self, title: &str, difficulty: &str) -> Result<Todo, rusqlite::Error> {
         let id = uuid::Uuid::new_v4().to_string();
         let points = match difficulty {
+            // Must match frontend/pages/index.tsx difficulty select labels
             "easy" => 5,
             "hard" => 20,
             _ => 10,

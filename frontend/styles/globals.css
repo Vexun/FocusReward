@@ -297,3 +297,18 @@ main {
   color: #64748b;
   font-size: 0.9375rem;
 }
+
+.error-banner {
+  background: #450a0a;
+  border: 1px solid #dc2626;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.error-banner p {
+  color: #fca5a5;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}

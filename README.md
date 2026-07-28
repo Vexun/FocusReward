@@ -126,7 +126,7 @@ If you believe your token has been exposed, or want to unpair all previously con
 3. Confirm the action. The old token is immediately invalidated.
 4. Pair each extension again using the PIN flow.
 
-All previously paired extensions will fail to authenticate on their next request and must be re-paired.
+All previously paired extensions will fail to authenticate on their next request and must be re-paired. This signs out all paired extensions at once — there is no per-device revocation.
 
 ### Block page
 

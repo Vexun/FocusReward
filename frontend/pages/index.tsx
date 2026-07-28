@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { api, Todo, PointBalance } from '@/lib/api'
+import Layout from '@/components/Layout'
+
+// Point values must match src-tauri/src/db/mod.rs (easy=5, medium=10, hard=20)
 
 export default function TasksPage() {
   const [todos, setTodos] = useState<Todo[]>([])
@@ -8,8 +10,11 @@ export default function TasksPage() {
   const [title, setTitle] = useState('')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const [t, b] = await Promise.all([
         api.getTodos(),
@@ -17,8 +22,8 @@ export default function TasksPage() {
       ])
       setTodos(t)
       setBalance(b)
-    } catch (e) {
-      console.error(e)
+    } catch {
+      setError("Can't reach the FocusReward server. Is the app running?")
     } finally {
       setLoading(false)
     }
@@ -46,7 +51,9 @@ export default function TasksPage() {
     }
   }
 
-  const deleteTask = async (id: string) => {
+  const deleteTask = async (id: string, completed: boolean) => {
+    if (completed && !confirm('Delete this completed task? Points already earned will not be affected.')) return
+    if (!completed && !confirm('Delete this task?')) return
     try {
       await api.deleteTodo(id)
       loadData()
@@ -61,6 +68,13 @@ export default function TasksPage() {
 
   return (
     <Layout balance={balance?.balance ?? 0}>
+      {error && (
+        <div className="error-banner">
+          <p>{error}</p>
+          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+        </div>
+      )}
+
       <div className="card">
         <h2>New Task</h2>
         <div className="form-row">
@@ -122,8 +136,9 @@ export default function TasksPage() {
               )}
               <button
                 className="btn btn-danger"
-                onClick={() => deleteTask(todo.id)}
+                onClick={() => deleteTask(todo.id, todo.completed)}
                 style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
+                title={todo.completed ? "Deleting won't affect points already earned" : undefined}
               >
                 Delete
               </button>
@@ -132,21 +147,5 @@ export default function TasksPage() {
         )}
       </div>
     </Layout>
-  )
-}
-
-function Layout({ children, balance }: { children: React.ReactNode; balance: number }) {
-  return (
-    <>
-      <nav>
-        <h1>FocusReward</h1>
-        <Link href="/">Tasks</Link>
-        <Link href="/rewards">Rewards</Link>
-        <Link href="/history">History</Link>
-        <Link href="/settings">Settings</Link>
-        <div className="balance">{balance} pts</div>
-      </nav>
-      <main>{children}</main>
-    </>
   )
 }

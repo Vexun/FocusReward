@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { api, RewardSite, PointBalance } from '@/lib/api'
+import Layout from '@/components/Layout'
 
 export default function SettingsPage() {
   const [sites, setSites] = useState<RewardSite[]>([])
   const [balance, setBalance] = useState<PointBalance | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
@@ -20,6 +21,8 @@ export default function SettingsPage() {
   const [resettingToken, setResettingToken] = useState(false)
 
   const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const [s, b] = await Promise.all([
         api.getSites(),
@@ -27,8 +30,8 @@ export default function SettingsPage() {
       ])
       setSites(s)
       setBalance(b)
-    } catch (e) {
-      console.error(e)
+    } catch {
+      setError("Can't reach the FocusReward server. Is the app running?")
     } finally {
       setLoading(false)
     }
@@ -101,6 +104,13 @@ export default function SettingsPage() {
 
   return (
     <Layout balance={balance?.balance ?? 0}>
+      {error && (
+        <div className="error-banner">
+          <p>{error}</p>
+          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+        </div>
+      )}
+
       <div className="card">
         <h2>Pair Browser Extension</h2>
         <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>
@@ -240,21 +250,5 @@ export default function SettingsPage() {
         )}
       </div>
     </Layout>
-  )
-}
-
-function Layout({ children, balance }: { children: React.ReactNode; balance: number }) {
-  return (
-    <>
-      <nav>
-        <h1>FocusReward</h1>
-        <Link href="/">Tasks</Link>
-        <Link href="/rewards">Rewards</Link>
-        <Link href="/history">History</Link>
-        <Link href="/settings">Settings</Link>
-        <div className="balance">{balance} pts</div>
-      </nav>
-      <main>{children}</main>
-    </>
   )
 }

@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { api, PointTransaction, PointBalance, ActiveUnlock } from '@/lib/api'
+import Layout from '@/components/Layout'
 
 export default function HistoryPage() {
   const [txs, setTxs] = useState<PointTransaction[]>([])
   const [balance, setBalance] = useState<PointBalance | null>(null)
   const [activeUnlocks, setActiveUnlocks] = useState<ActiveUnlock[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const [h, b, u] = await Promise.all([
         api.getHistory(),
@@ -18,8 +21,8 @@ export default function HistoryPage() {
       setTxs(h)
       setBalance(b)
       setActiveUnlocks(u)
-    } catch (e) {
-      console.error(e)
+    } catch {
+      setError("Can't reach the FocusReward server. Is the app running?")
     } finally {
       setLoading(false)
     }
@@ -33,6 +36,13 @@ export default function HistoryPage() {
 
   return (
     <Layout balance={balance?.balance ?? 0}>
+      {error && (
+        <div className="error-banner">
+          <p>{error}</p>
+          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+        </div>
+      )}
+
       {activeUnlocks.length > 0 && (
         <div className="card">
           <h2>Active Unlocks</h2>
@@ -73,21 +83,5 @@ export default function HistoryPage() {
         )}
       </div>
     </Layout>
-  )
-}
-
-function Layout({ children, balance }: { children: React.ReactNode; balance: number }) {
-  return (
-    <>
-      <nav>
-        <h1>FocusReward</h1>
-        <Link href="/">Tasks</Link>
-        <Link href="/rewards">Rewards</Link>
-        <Link href="/history">History</Link>
-        <Link href="/settings">Settings</Link>
-        <div className="balance">{balance} pts</div>
-      </nav>
-      <main>{children}</main>
-    </>
   )
 }
