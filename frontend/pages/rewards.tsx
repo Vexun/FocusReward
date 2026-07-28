@@ -14,7 +14,7 @@ export default function RewardsPage() {
       const [s, b, u] = await Promise.all([
         api.getSites(),
         api.getBalance(),
-        fetch('/api/extension/active-unlocks').then(r => r.json()),
+        api.getActiveUnlocks(),
       ])
       setSites(s)
       setBalance(b)
@@ -65,6 +65,7 @@ export default function RewardsPage() {
         ) : (
           sites.map(site => {
             const activeInfo = getActiveInfo(site.id, site.url)
+            const insufficientBalance = balance !== null && site.timed_cost > balance.balance
             return (
               <div key={site.id} className="site-card">
                 <div className="site-info">
@@ -82,7 +83,7 @@ export default function RewardsPage() {
                   <button
                     className="btn btn-primary"
                     onClick={() => unlock(site.id)}
-                    disabled={unlockingId === site.id}
+                    disabled={unlockingId === site.id || insufficientBalance}
                     style={{ marginTop: '0.5rem' }}
                   >
                     {unlockingId === site.id ? '...' : 'Unlock'}

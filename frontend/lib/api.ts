@@ -46,9 +46,32 @@ export interface ActiveUnlock {
   expires_at: string
 }
 
+let authToken: string | null = null
+
+async function getToken(): Promise<string | null> {
+  if (authToken) return authToken
+  try {
+    const res = await fetch('/api/health')
+    if (res.ok) {
+      const data = await res.json()
+      authToken = data.token
+      return authToken
+    }
+  } catch (e) {
+    // server not available
+  }
+  return null
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = await getToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['X-FocusReward-Token'] = token
+  }
+
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   })
   if (!res.ok) {
@@ -95,4 +118,6 @@ export const api = {
   getBalance: () => request<PointBalance>('/api/points/balance'),
 
   getHistory: () => request<PointTransaction[]>('/api/points/history'),
+
+  getActiveUnlocks: () => request<ActiveUnlock[]>('/api/extension/active-unlocks'),
 }

@@ -41,3 +41,7 @@ The browser extension blocks distracting websites. You control the extension wit
 | `focus.js` | Block page logic. |
 | `webextension-polyfill.js` | Compatibility layer for Chrome and Firefox. |
 | `icons/` | Extension icons. |
+
+## Note on Manifest V2
+
+This extension uses Manifest V2. Chrome is deprecating Manifest V2. For long-term Chrome support, migrate to Manifest V3 with `declarativeNetRequest`. Firefox continues to support Manifest V2.

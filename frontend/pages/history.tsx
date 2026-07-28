@@ -13,7 +13,7 @@ export default function HistoryPage() {
       const [h, b, u] = await Promise.all([
         api.getHistory(),
         api.getBalance(),
-        fetch('/api/extension/active-unlocks').then(r => r.json()),
+        api.getActiveUnlocks(),
       ])
       setTxs(h)
       setBalance(b)

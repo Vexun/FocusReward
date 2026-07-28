@@ -76,4 +76,5 @@ pub struct ActiveUnlock {
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub app: String,
+    pub token: String,
 }

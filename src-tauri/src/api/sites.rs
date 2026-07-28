@@ -7,6 +7,17 @@ use std::sync::Arc;
 use crate::AppState;
 use crate::models::{RewardSite, CreateSiteRequest};
 
+fn normalize_url(raw: &str) -> String {
+    let raw = raw.trim();
+    let raw = raw
+        .trim_start_matches("https://")
+        .trim_start_matches("http://");
+    let raw = raw
+        .trim_start_matches("www.")
+        .trim_end_matches('/');
+    raw.to_lowercase()
+}
+
 pub async fn list_sites(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<RewardSite>>, (StatusCode, String)> {
@@ -40,8 +51,23 @@ pub async fn create_site(
         ));
     }
 
+    let normalized = normalize_url(&req.url);
+    if normalized.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "url is not valid".to_string(),
+        ));
+    }
+
+    let site_req = CreateSiteRequest {
+        url: normalized.clone(),
+        name: req.name.trim().to_string(),
+        timed_cost: req.timed_cost,
+        timed_duration_minutes: req.timed_duration_minutes,
+    };
+
     let db = state.db.lock().await;
-    let site = db.create_site(&req).map_err(|e| {
+    let site = db.create_site(&site_req).map_err(|e| {
         (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
     Ok((StatusCode::CREATED, Json(site)))

@@ -141,11 +141,17 @@ impl Database {
     pub fn complete_todo(&mut self, id: &str) -> Result<Todo, rusqlite::Error> {
         let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-        let points: i64 = self.conn.query_row(
-            "SELECT points FROM todos WHERE id = ?1",
+        let (points, completed): (i64, bool) = self.conn.query_row(
+            "SELECT points, completed FROM todos WHERE id = ?1",
             params![id],
-            |r| r.get(0),
+            |r| Ok((r.get(0)?, r.get::<_, i64>(1)? != 0)),
         )?;
+
+        if completed {
+            return Err(rusqlite::Error::ToSqlConversionFailure(Box::new(
+                std::io::Error::new(std::io::ErrorKind::Other, "todo already completed"),
+            )));
+        }
 
         self.conn.execute(
             "UPDATE todos SET completed = 1, completed_at = ?1 WHERE id = ?2",

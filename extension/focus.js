@@ -1,17 +1,7 @@
 const params = new URLSearchParams(location.search);
 const siteUrl = params.get('site') || 'unknown';
-let currentPort = null;
 
 async function init() {
-  const port = await getPort();
-  if (!port) {
-    document.getElementById('balance').textContent = 'Offline';
-    document.getElementById('cost').textContent = '---';
-    document.getElementById('unlockBtn').disabled = true;
-    return;
-  }
-  currentPort = port;
-
   document.getElementById('siteName').textContent =
     `${siteUrl} is blocked`;
 
@@ -21,33 +11,34 @@ async function init() {
 
 async function loadStatus() {
   try {
-    const [balanceRes, sitesRes] = await Promise.all([
-      fetch(`http://127.0.0.1:${currentPort}/api/points/balance`),
-      fetch(`http://127.0.0.1:${currentPort}/api/sites`),
-    ]);
+    const status = await browser.runtime.sendMessage({
+      type: 'getStatus',
+      siteUrl: siteUrl,
+    });
 
-    if (balanceRes.ok) {
-      const balance = await balanceRes.json();
-      document.getElementById('balance').textContent = `${balance.balance} pts`;
+    if (status.error) {
+      document.getElementById('balance').textContent = 'Error';
+      document.getElementById('cost').textContent = 'Error';
+      return;
     }
 
-    if (sitesRes.ok) {
-      const sites = await sitesRes.json();
-      const site = sites.find(s => s.url === siteUrl || s.url === `www.${siteUrl}`);
-      if (site) {
-        document.getElementById('cost').textContent = `${site.timed_cost} pts`;
-        document.getElementById('unlockBtn').dataset.siteId = site.id;
+    document.getElementById('balance').textContent =
+      status.balance !== null ? `${status.balance} pts` : 'Offline';
 
-        if (site.timed_cost > parseInt(document.getElementById('balance').textContent)) {
-          document.getElementById('unlockBtn').disabled = true;
-        }
-      } else {
-        document.getElementById('cost').textContent = 'Not configured';
+    if (status.cost !== null) {
+      document.getElementById('cost').textContent = `${status.cost} pts`;
+      document.getElementById('unlockBtn').dataset.siteId = status.siteId;
+
+      if (status.balance !== null && status.cost > status.balance) {
         document.getElementById('unlockBtn').disabled = true;
       }
+    } else {
+      document.getElementById('cost').textContent = 'Not configured';
+      document.getElementById('unlockBtn').disabled = true;
     }
   } catch (e) {
     document.getElementById('balance').textContent = 'Error';
+    document.getElementById('cost').textContent = 'Error';
   }
 }
 
@@ -61,24 +52,22 @@ async function handleUnlock() {
   statusMsg.textContent = '';
 
   try {
-    const res = await fetch(`http://127.0.0.1:${currentPort}/api/unlock/timed`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ site_id: siteId }),
+    const result = await browser.runtime.sendMessage({
+      type: 'unlock',
+      siteId: siteId,
     });
 
-    if (res.ok) {
+    if (result.error) {
+      statusMsg.className = 'error';
+      statusMsg.textContent = result.error || 'Failed to unlock';
+      btn.disabled = false;
+    } else {
       statusMsg.className = 'success';
       statusMsg.textContent = 'Unlocked! You can now visit this site.';
       loadStatus();
       setTimeout(() => {
         window.close();
       }, 2000);
-    } else {
-      const text = await res.text();
-      statusMsg.className = 'error';
-      statusMsg.textContent = text || 'Failed to unlock';
-      btn.disabled = false;
     }
   } catch (e) {
     statusMsg.className = 'error';

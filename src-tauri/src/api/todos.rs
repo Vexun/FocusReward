@@ -51,7 +51,12 @@ pub async fn complete_todo(
 ) -> Result<Json<Todo>, (StatusCode, String)> {
     let mut db = state.db.lock().await;
     let todo = db.complete_todo(&id).map_err(|e| {
-        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        let msg = e.to_string();
+        if msg.contains("todo already completed") {
+            (StatusCode::CONFLICT, msg)
+        } else {
+            (StatusCode::INTERNAL_SERVER_ERROR, msg)
+        }
     })?;
     Ok(Json(todo))
 }

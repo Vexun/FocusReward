@@ -1,35 +1,42 @@
+use std::net::TcpListener;
 use std::path::PathBuf;
 
 pub struct Config {
+    pub listener: TcpListener,
     pub port: u16,
     pub db_path: PathBuf,
     pub frontend_path: PathBuf,
+    pub auth_token: String,
 }
 
 const PORT_RANGE_START: u16 = 41000;
 const PORT_RANGE_END: u16 = 41004;
 
-fn find_free_port() -> Option<u16> {
+fn find_free_port() -> Option<(TcpListener, u16)> {
     for port in PORT_RANGE_START..=PORT_RANGE_END {
-        if let Ok(listener) = std::net::TcpListener::bind((std::net::Ipv4Addr::new(127, 0, 0, 1), port)) {
-            let _ = listener;
-            return Some(port);
+        if let Ok(listener) = TcpListener::bind((std::net::Ipv4Addr::new(127, 0, 0, 1), port)) {
+            let addr = listener.local_addr().ok()?;
+            return Some((listener, addr.port()));
         }
     }
     None
 }
 
 pub fn load_config() -> Config {
-    let port = find_free_port().expect("no free port found in range 41000-41004");
+    let (listener, port) = find_free_port().expect("no free port found in range 41000-41004");
 
     let db_path = dirs_or_default();
 
     let frontend_path = find_frontend_path();
 
+    let auth_token = uuid::Uuid::new_v4().to_string();
+
     Config {
+        listener,
         port,
         db_path,
         frontend_path,
+        auth_token,
     }
 }
 
