@@ -4,6 +4,7 @@ mod sites;
 mod unlocks;
 mod points;
 mod extension;
+mod pair;
 
 use axum::{
     Router,
@@ -32,7 +33,7 @@ async fn auth_middleware(
 
     let path = req.uri().path().to_string();
 
-    if path == "/api/health" {
+    if path == "/api/health" || path == "/api/pair" {
         return Ok(next.run(req).await);
     }
 
@@ -71,6 +72,8 @@ pub fn create_router(state: Arc<AppState>, config: &Config) -> Router {
         .route("/api/points/balance", get(points::balance))
         .route("/api/points/history", get(points::history))
         .route("/api/extension/active-unlocks", get(extension::active_unlocks))
+        .route("/api/pair/generate", post(pair::generate_pin))
+        .route("/api/pair", post(pair::pair))
         .layer(ServiceBuilder::new()
             .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
             .layer(cors)

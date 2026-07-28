@@ -76,5 +76,24 @@ pub struct ActiveUnlock {
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub app: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PairRequest {
+    pub pin: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PairResponse {
     pub token: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GeneratePinResponse {
+    pub pin: String,
+}
+
+pub struct PairingState {
+    pub pin: String,
+    pub expires_at: chrono::NaiveDateTime,
 }

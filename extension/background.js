@@ -5,14 +5,31 @@ let lastSitesFetchTime = 0;
 let currentPort = null;
 let currentToken = null;
 
+async function getStoredToken() {
+  if (currentToken) return currentToken;
+  const result = await browser.storage.local.get('focusreward_token');
+  if (result.focusreward_token) {
+    currentToken = result.focusreward_token;
+  }
+  return currentToken;
+}
+
+async function storeToken(token) {
+  currentToken = token;
+  await browser.storage.local.set({ 'focusreward_token': token });
+}
+
 async function apiFetch(path, options) {
   const port = await getPort();
   if (!port) throw new Error('FocusReward server not found');
   currentPort = port;
   const headers = { 'Content-Type': 'application/json' };
-  if (currentToken) {
-    headers['X-FocusReward-Token'] = currentToken;
+
+  const token = await getStoredToken();
+  if (token) {
+    headers['X-FocusReward-Token'] = token;
   }
+
   const res = await fetch(`http://127.0.0.1:${port}${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },
@@ -31,7 +48,7 @@ async function fetchActiveUnlocks() {
     activeUnlocks = data;
     lastFetchTime = Date.now();
   } catch (e) {
-    // server not available
+    // server not available or not paired
   }
 }
 
@@ -41,7 +58,7 @@ async function fetchRewardSites() {
     rewardSites = data;
     lastSitesFetchTime = Date.now();
   } catch (e) {
-    // server not available
+    // server not available or not paired
   }
 }
 
@@ -144,9 +161,43 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(e => sendResponse({ error: e.message }));
     return true;
   }
+  if (message.type === 'pair') {
+    pairExtension(message.pin)
+      .then(sendResponse)
+      .catch(e => sendResponse({ error: e.message }));
+    return true;
+  }
+  if (message.type === 'isPaired') {
+    getStoredToken().then(token => sendResponse({ paired: !!token }));
+    return true;
+  }
 });
 
+async function pairExtension(pin) {
+  const port = await getPort();
+  if (!port) throw new Error('FocusReward server not found');
+
+  const res = await fetch(`http://127.0.0.1:${port}/api/pair`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'Pairing failed');
+  }
+
+  const data = await res.json();
+  await storeToken(data.token);
+  await discoverAndInit();
+  return { paired: true };
+}
+
 async function getStatus(siteUrl) {
+  const token = await getStoredToken();
+  if (!token) return { paired: false, balance: null, cost: null, siteId: null, unlocked: false };
+
   const hostname = siteUrl.replace(/^www\./, '');
   const cost = getSiteCost(hostname);
   const unlocked = isUnlocked(hostname);
@@ -158,7 +209,7 @@ async function getStatus(siteUrl) {
   } catch (e) {
     // offline
   }
-  return { balance, cost, siteId, unlocked };
+  return { paired: true, balance, cost, siteId, unlocked };
 }
 
 async function getBalance() {
@@ -189,20 +240,13 @@ async function discoverAndInit() {
   currentPort = port;
   await browser.storage.local.set({ [FOCUSREWARD.CACHE_KEY]: port });
 
-  try {
-    const health = await apiFetch('/api/health');
-    if (health.token) {
-      currentToken = health.token;
-      await browser.storage.local.set({ 'focusreward_token': health.token });
-    }
-  } catch (e) {
-    // token fetch failed, will retry
+  const token = await getStoredToken();
+  if (token) {
+    await Promise.all([
+      fetchRewardSites(),
+      fetchActiveUnlocks(),
+    ]);
   }
-
-  await Promise.all([
-    fetchRewardSites(),
-    fetchActiveUnlocks(),
-  ]);
 }
 
 // Periodic refresh

@@ -1,15 +1,56 @@
 const params = new URLSearchParams(location.search);
-const siteUrl = params.get('site') || 'unknown';
+const siteUrl = params.get('site');
+const isPopup = !siteUrl;
 
 async function init() {
-  document.getElementById('siteName').textContent =
-    `${siteUrl} is blocked`;
+  const paired = await browser.runtime.sendMessage({ type: 'isPaired' });
 
-  loadStatus();
+  if (isPopup) {
+    document.getElementById('popupMode').style.display = 'block';
+
+    if (!paired.paired) {
+      document.getElementById('pairingSection').style.display = 'block';
+      document.getElementById('blockSection').style.display = 'none';
+      document.getElementById('pairBtn').addEventListener('click', handlePair);
+    } else {
+      document.getElementById('pairingSection').style.display = 'none';
+      document.getElementById('blockSection').style.display = 'block';
+      document.getElementById('popupSiteName').textContent =
+        'FocusReward is active.';
+      loadPopupStatus();
+    }
+    return;
+  }
+
+  // Block page mode
+  document.getElementById('blockPageMode').style.display = 'block';
+
+  if (!paired.paired) {
+    document.getElementById('blockSiteName').textContent =
+      'Extension not paired';
+    document.getElementById('blockMessage').textContent =
+      'Open the desktop app Settings page and pair this extension.';
+    document.getElementById('unlockBtn').disabled = true;
+    return;
+  }
+
+  document.getElementById('blockSiteName').textContent =
+    `${siteUrl} is blocked`;
   document.getElementById('unlockBtn').addEventListener('click', handleUnlock);
+  loadBlockStatus();
 }
 
-async function loadStatus() {
+async function loadPopupStatus() {
+  try {
+    const b = await browser.runtime.sendMessage({ type: 'getBalance' });
+    document.getElementById('popupBalance').textContent =
+      b.balance !== null ? `${b.balance} pts` : 'Offline';
+  } catch (e) {
+    document.getElementById('popupBalance').textContent = 'Error';
+  }
+}
+
+async function loadBlockStatus() {
   try {
     const status = await browser.runtime.sendMessage({
       type: 'getStatus',
@@ -64,7 +105,7 @@ async function handleUnlock() {
     } else {
       statusMsg.className = 'success';
       statusMsg.textContent = 'Unlocked! You can now visit this site.';
-      loadStatus();
+      loadBlockStatus();
       setTimeout(() => {
         window.close();
       }, 2000);
@@ -73,6 +114,49 @@ async function handleUnlock() {
     statusMsg.className = 'error';
     statusMsg.textContent = 'Connection error';
     btn.disabled = false;
+  }
+}
+
+async function handlePair() {
+  const pinInput = document.getElementById('pinInput');
+  const statusMsg = document.getElementById('pairStatusMsg');
+  const pairBtn = document.getElementById('pairBtn');
+  const pin = pinInput.value.trim();
+
+  if (!pin) {
+    statusMsg.className = 'error';
+    statusMsg.textContent = 'Enter the pin from the Settings page.';
+    return;
+  }
+
+  pairBtn.disabled = true;
+  statusMsg.textContent = '';
+
+  try {
+    const result = await browser.runtime.sendMessage({
+      type: 'pair',
+      pin: pin,
+    });
+
+    if (result.error) {
+      statusMsg.className = 'error';
+      statusMsg.textContent = result.error || 'Pairing failed';
+      pairBtn.disabled = false;
+    } else {
+      statusMsg.className = 'success';
+      statusMsg.textContent = 'Paired successfully!';
+      setTimeout(() => {
+        document.getElementById('pairingSection').style.display = 'none';
+        document.getElementById('blockSection').style.display = 'block';
+        document.getElementById('popupSiteName').textContent =
+          'FocusReward is active.';
+        loadPopupStatus();
+      }, 1500);
+    }
+  } catch (e) {
+    statusMsg.className = 'error';
+    statusMsg.textContent = 'Connection error';
+    pairBtn.disabled = false;
   }
 }
 

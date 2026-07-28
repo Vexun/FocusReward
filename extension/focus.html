@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FocusReward - Blocked</title>
+  <title>FocusReward</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -18,10 +18,6 @@
     .container {
       text-align: center;
       max-width: 420px;
-    }
-    .blocked-icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
     }
     h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
     p { color: #94a3b8; margin-bottom: 0.5rem; }
@@ -56,28 +52,63 @@
     .btn-secondary:hover { background: #475569; }
     .error { color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem; }
     .success { color: #22c55e; font-size: 0.875rem; margin-top: 0.5rem; }
+    input[type=text] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.5rem;
+      color: #e2e8f0;
+      font-size: 1.25rem;
+      text-align: center;
+      letter-spacing: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    input[type=text]:focus { outline: none; border-color: #38bdf8; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="blocked-icon">LOCK</div>
-    <h2 id="siteName">This site is blocked</h2>
-    <p>Complete tasks to earn points, then unlock this site.</p>
+    <!-- Block page mode -->
+    <div id="blockPageMode" style="display:none">
+      <h2 id="blockSiteName">This site is blocked</h2>
+      <p id="blockMessage">Complete tasks to earn points, then unlock this site.</p>
 
-    <div class="info">
-      <div class="info-item">
-        <span class="label">Points Balance</span>
-        <span class="value" id="balance">---</span>
+      <div class="info">
+        <div class="info-item">
+          <span class="label">Points Balance</span>
+          <span class="value" id="balance">---</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Unlock Cost</span>
+          <span class="value" id="cost">---</span>
+        </div>
       </div>
-      <div class="info-item">
-        <span class="label">Unlock Cost</span>
-        <span class="value" id="cost">---</span>
-      </div>
+
+      <button class="btn btn-primary" id="unlockBtn">Unlock</button>
+      <div id="statusMsg"></div>
     </div>
 
-    <button class="btn btn-primary" id="unlockBtn">Unlock</button>
+    <!-- Popup mode -->
+    <div id="popupMode" style="display:none">
+      <div id="pairingSection" style="display:none">
+        <h2>Pair Extension</h2>
+        <p>Enter the 6-digit pin from the Settings page in the desktop app.</p>
+        <input type="text" id="pinInput" maxlength="6" placeholder="000000" />
+        <button class="btn btn-primary" id="pairBtn">Pair</button>
+        <div id="pairStatusMsg"></div>
+      </div>
 
-    <div id="statusMsg"></div>
+      <div id="blockSection" style="display:none">
+        <h2 id="popupSiteName">FocusReward</h2>
+        <div class="info">
+          <div class="info-item">
+            <span class="label">Points Balance</span>
+            <span class="value" id="popupBalance">---</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="webextension-polyfill.js"></script>

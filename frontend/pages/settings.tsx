@@ -12,6 +12,10 @@ export default function SettingsPage() {
   const [cost, setCost] = useState('10')
   const [duration, setDuration] = useState('30')
 
+  const [pairingPin, setPairingPin] = useState<string | null>(null)
+  const [pairingMessage, setPairingMessage] = useState('')
+  const [generatingPin, setGeneratingPin] = useState(false)
+
   const loadData = useCallback(async () => {
     try {
       const [s, b] = await Promise.all([
@@ -59,12 +63,60 @@ export default function SettingsPage() {
     }
   }
 
+  const generatePin = async () => {
+    setGeneratingPin(true)
+    setPairingMessage('')
+    setPairingPin(null)
+    try {
+      const result = await api.generatePairingPin()
+      setPairingPin(result.pin)
+      setPairingMessage('Enter this pin in the browser extension within 60 seconds.')
+    } catch (e) {
+      setPairingMessage('Failed to generate pin.')
+    } finally {
+      setGeneratingPin(false)
+    }
+  }
+
   if (loading) {
     return <Layout balance={balance?.balance ?? 0}><p>Loading...</p></Layout>
   }
 
   return (
     <Layout balance={balance?.balance ?? 0}>
+      <div className="card">
+        <h2>Pair Browser Extension</h2>
+        <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          The browser extension needs a one-time token to communicate with the desktop app.
+        </p>
+        <button
+          className="btn btn-primary"
+          onClick={generatePin}
+          disabled={generatingPin}
+        >
+          {generatingPin ? 'Generating...' : 'Generate Pairing Pin'}
+        </button>
+        {pairingPin && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: '#0f172a',
+            border: '1px solid #38bdf8',
+            borderRadius: '0.5rem',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#38bdf8', letterSpacing: '0.5rem' }}>
+              {pairingPin}
+            </div>
+          </div>
+        )}
+        {pairingMessage && (
+          <p style={{ color: '#94a3b8', fontSize: '0.8125rem', marginTop: '0.5rem' }}>
+            {pairingMessage}
+          </p>
+        )}
+      </div>
+
       <div className="card">
         <h2>Add Custom Site</h2>
         <div className="form-group">

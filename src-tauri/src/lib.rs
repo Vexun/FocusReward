@@ -6,6 +6,7 @@ pub mod api;
 use config::Config;
 use db::Database;
 use api::create_router;
+use models::PairingState;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -13,6 +14,7 @@ use tokio::sync::Mutex;
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
     pub auth_token: String,
+    pub pairing_pin: Arc<Mutex<Option<PairingState>>>,
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
@@ -23,6 +25,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(AppState {
         db: Arc::new(Mutex::new(db)),
         auth_token: config.auth_token.clone(),
+        pairing_pin: Arc::new(Mutex::new(None)),
     });
 
     let router = create_router(state.clone(), &config);
