@@ -38,7 +38,7 @@ The desktop application shows your tasks and your reward sites. The browser exte
 | Instagram | 10 | 30 |
 | Twitch | 15 | 30 |
 
-You can add custom sites in the Settings page.
+You can add custom sites in the Settings page. Each custom site needs a URL, name, points cost, and unlock duration.
 
 ## Requirements
 
@@ -101,7 +101,34 @@ The application starts. The API server finds a free port between 41000 and 41004
 3. Click "Load Temporary Add-on" (Firefox) or "Load unpacked" (Chrome).
 4. Select the `extension/` directory.
 
-The extension starts. It scans ports 41000 to 41004 on `127.0.0.1`. It stores the correct port.
+The extension starts. It scans ports 41000 to 41004 on `127.0.0.1` and stores the correct port.
+
+### Pairing
+
+Before the extension can block or unlock sites, it must be paired with the desktop app:
+
+1. Open the desktop app and go to the **Settings** page.
+2. Click **Generate Pin** — a 6-digit code appears.
+3. Click the extension icon in your browser toolbar.
+4. If the extension is not paired, it shows a PIN input. Enter the 6-digit code and click **Pair**.
+5. On success, the extension is paired. It now fetches your reward sites and active unlocks.
+
+The PIN expires after 60 seconds. If it expires, generate a new one.
+
+### Block page
+
+When you visit a blocked reward site, the extension redirects you to a block page showing:
+
+- The site name
+- Your current points balance
+- The unlock cost
+- An **Unlock** button (disabled if you don't have enough points)
+
+Clicking **Unlock** spends the points and allows the site for the configured duration. The page closes automatically after 2 seconds and the site becomes accessible.
+
+### Extension popup
+
+Click the extension icon to open the popup. It shows your current points balance. If the extension is not paired, it shows the pairing interface instead.
 
 ## Configuration
 
