@@ -16,6 +16,9 @@ export default function SettingsPage() {
   const [pairingMessage, setPairingMessage] = useState('')
   const [generatingPin, setGeneratingPin] = useState(false)
 
+  const [resetMessage, setResetMessage] = useState('')
+  const [resettingToken, setResettingToken] = useState(false)
+
   const loadData = useCallback(async () => {
     try {
       const [s, b] = await Promise.all([
@@ -78,6 +81,21 @@ export default function SettingsPage() {
     }
   }
 
+  const handleResetToken = async () => {
+    if (!confirm('This will invalidate all paired extensions and require re-pairing. Continue?')) return
+    setResettingToken(true)
+    setResetMessage('')
+    try {
+      const result = await api.resetToken()
+      ;(window as any).__FOCUSREWARD_TOKEN__ = result.token
+      setResetMessage('Token reset successfully. Extensions must be re-paired.')
+    } catch (e) {
+      setResetMessage('Failed to reset token.')
+    } finally {
+      setResettingToken(false)
+    }
+  }
+
   if (loading) {
     return <Layout balance={balance?.balance ?? 0}><p>Loading...</p></Layout>
   }
@@ -113,6 +131,26 @@ export default function SettingsPage() {
         {pairingMessage && (
           <p style={{ color: '#94a3b8', fontSize: '0.8125rem', marginTop: '0.5rem' }}>
             {pairingMessage}
+          </p>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Access Token</h2>
+        <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          The access token is stored on disk and persists across app restarts.
+          Paired extensions remain connected indefinitely.
+        </p>
+        <button
+          className="btn btn-danger"
+          onClick={handleResetToken}
+          disabled={resettingToken}
+        >
+          {resettingToken ? 'Resetting...' : 'Reset Access Token'}
+        </button>
+        {resetMessage && (
+          <p style={{ color: '#94a3b8', fontSize: '0.8125rem', marginTop: '0.5rem' }}>
+            {resetMessage}
           </p>
         )}
       </div>

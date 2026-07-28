@@ -65,7 +65,7 @@ pub async fn pair(
     match pairing.take() {
         Some(ps) if ps.pin == req.pin && chrono::Utc::now().naive_utc() <= ps.expires_at => {
             Ok(Json(PairResponse {
-                token: state.auth_token.clone(),
+                token: state.auth_token.read().unwrap().clone(),
             }))
         }
         _ => Err((StatusCode::UNAUTHORIZED, "invalid or expired pin".to_string())),

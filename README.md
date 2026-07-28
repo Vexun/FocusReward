@@ -115,6 +115,19 @@ Before the extension can block or unlock sites, it must be paired with the deskt
 
 The PIN expires after 60 seconds. If it expires, generate a new one.
 
+Pairing persists across app restarts. The access token is stored in a file alongside the database and loaded automatically on startup.
+
+### Resetting the access token
+
+If you believe your token has been exposed, or want to unpair all previously connected extensions:
+
+1. Open the desktop app and go to the **Settings** page.
+2. Click **Reset Access Token** at the bottom of the page.
+3. Confirm the action. The old token is immediately invalidated.
+4. Pair each extension again using the PIN flow.
+
+All previously paired extensions will fail to authenticate on their next request and must be re-paired.
+
 ### Block page
 
 When you visit a blocked reward site, the extension redirects you to a block page showing:
@@ -136,7 +149,7 @@ Set these environment variables to change default paths:
 
 | Variable | Purpose |
 |----------|---------|
-| `FOCUSREWARD_DATA_DIR` | Directory for the SQLite database file. Default is the current directory. |
+| `FOCUSREWARD_DATA_DIR` | Directory for the SQLite database and token file. Default is the current directory. |
 | `FOCUSREWARD_FRONTEND_DIR` | Directory for the frontend static files. Default is `../frontend/out`. |
 
 ## Project Structure

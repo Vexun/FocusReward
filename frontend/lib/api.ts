@@ -104,4 +104,6 @@ export const api = {
   getActiveUnlocks: () => request<ActiveUnlock[]>('/api/extension/active-unlocks'),
 
   generatePairingPin: () => request<{ pin: string }>('/api/pair/generate', { method: 'POST' }),
+
+  resetToken: () => request<{ token: string }>('/api/token/reset', { method: 'POST' }),
 }

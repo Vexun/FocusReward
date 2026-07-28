@@ -1,5 +1,6 @@
 use std::net::TcpListener;
 use std::path::PathBuf;
+use std::path::Path;
 
 pub struct Config {
     pub listener: TcpListener,
@@ -7,6 +8,7 @@ pub struct Config {
     pub db_path: PathBuf,
     pub frontend_path: PathBuf,
     pub auth_token: String,
+    pub token_path: PathBuf,
 }
 
 const PORT_RANGE_START: u16 = 41000;
@@ -25,11 +27,13 @@ fn find_free_port() -> Option<(TcpListener, u16)> {
 pub fn load_config() -> Config {
     let (listener, port) = find_free_port().expect("no free port found in range 41000-41004");
 
-    let db_path = dirs_or_default();
+    let data_dir = dirs_data_dir().unwrap_or_else(|| PathBuf::from("."));
+    std::fs::create_dir_all(&data_dir).ok();
 
+    let db_path = data_dir.join("focusreward.db");
+    let token_path = data_dir.join("focusreward.token");
     let frontend_path = find_frontend_path();
-
-    let auth_token = uuid::Uuid::new_v4().to_string();
+    let auth_token = load_or_create_token(&token_path);
 
     Config {
         listener,
@@ -37,13 +41,38 @@ pub fn load_config() -> Config {
         db_path,
         frontend_path,
         auth_token,
+        token_path,
     }
 }
 
-fn dirs_or_default() -> PathBuf {
-    let data_dir = dirs_data_dir().unwrap_or_else(|| PathBuf::from("."));
-    std::fs::create_dir_all(&data_dir).ok();
-    data_dir.join("focusreward.db")
+fn load_or_create_token(token_path: &Path) -> String {
+    if let Ok(content) = std::fs::read_to_string(token_path) {
+        let trimmed = content.trim().to_string();
+        if !trimmed.is_empty() {
+            return trimmed;
+        }
+    }
+    let token = uuid::Uuid::new_v4().to_string();
+    std::fs::write(token_path, &token).expect("failed to write token file");
+    set_restrictive_permissions(token_path);
+    token
+}
+
+#[cfg(unix)]
+pub fn set_restrictive_permissions(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    if let Ok(metadata) = std::fs::metadata(path) {
+        let mut perms = metadata.permissions();
+        perms.set_mode(0o600);
+        let _ = std::fs::set_permissions(path, perms);
+    }
+}
+
+#[cfg(not(unix))]
+pub fn set_restrictive_permissions(_path: &Path) {
+    // Windows ACLs are not explicitly handled here.
+    // In the typical single-user-desktop case, default file permissions
+    // restrict access to the owning user. This is a known gap.
 }
 
 fn dirs_data_dir() -> Option<PathBuf> {

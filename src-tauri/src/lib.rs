@@ -9,6 +9,8 @@ use api::create_router;
 use models::PairingState;
 
 use std::sync::Arc;
+use std::sync::RwLock;
+use std::path::PathBuf;
 use tokio::sync::Mutex;
 use chrono::NaiveDateTime;
 
@@ -28,9 +30,10 @@ impl RateLimitState {
 
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
-    pub auth_token: String,
+    pub auth_token: RwLock<String>,
     pub pairing_pin: Arc<Mutex<Option<PairingState>>>,
     pub rate_limiter: RateLimitState,
+    pub token_path: PathBuf,
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
@@ -40,9 +43,10 @@ pub fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let db = Database::open(&config.db_path)?;
     let state = Arc::new(AppState {
         db: Arc::new(Mutex::new(db)),
-        auth_token: config.auth_token.clone(),
+        auth_token: RwLock::new(config.auth_token.clone()),
         pairing_pin: Arc::new(Mutex::new(None)),
         rate_limiter: RateLimitState::new(),
+        token_path: config.token_path.clone(),
     });
 
     let router = create_router(state.clone(), &config);

@@ -5,6 +5,7 @@ mod unlocks;
 mod points;
 mod extension;
 mod pair;
+mod token;
 
 use axum::{
     Router,
@@ -44,7 +45,8 @@ async fn auth_middleware(
             .and_then(|v| v.to_str().ok())
             .unwrap_or("");
 
-        if token != state.auth_token {
+        let expected = state.auth_token.read().unwrap();
+        if token != *expected {
             return Err((StatusCode::UNAUTHORIZED, "invalid token".to_string()));
         }
     }
@@ -74,6 +76,7 @@ pub fn create_router(state: Arc<AppState>, config: &Config) -> Router {
         .route("/api/extension/active-unlocks", get(extension::active_unlocks))
         .route("/api/pair/generate", post(pair::generate_pin))
         .route("/api/pair", post(pair::pair))
+        .route("/api/token/reset", post(token::reset_token))
         .layer(ServiceBuilder::new()
             .layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
             .layer(cors)

@@ -97,3 +97,8 @@ pub struct PairingState {
     pub pin: String,
     pub expires_at: chrono::NaiveDateTime,
 }
+
+#[derive(Debug, Serialize)]
+pub struct ResetTokenResponse {
+    pub token: String,
+}
