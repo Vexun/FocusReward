@@ -1,36 +1,24 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { api, RewardSite, PointBalance, ActiveUnlock } from '@/lib/api'
+import { useApiData } from '@/lib/useApiData'
 import Layout from '@/components/Layout'
 
 export default function RewardsPage() {
-  const [sites, setSites] = useState<RewardSite[]>([])
-  const [balance, setBalance] = useState<PointBalance | null>(null)
-  const [activeUnlocks, setActiveUnlocks] = useState<ActiveUnlock[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, loading, error, retry } = useApiData(async () => {
+    const [sites, balance, activeUnlocks] = await Promise.all([
+      api.getSites(),
+      api.getBalance(),
+      api.getActiveUnlocks(),
+    ])
+    return { sites, balance, activeUnlocks }
+  })
+
+  const sites = data?.sites ?? []
+  const balance = data?.balance ?? null
+  const activeUnlocks = data?.activeUnlocks ?? []
+
   const [unlockingId, setUnlockingId] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [s, b, u] = await Promise.all([
-        api.getSites(),
-        api.getBalance(),
-        api.getActiveUnlocks(),
-      ])
-      setSites(s)
-      setBalance(b)
-      setActiveUnlocks(u)
-    } catch {
-      setError("Can't reach the FocusReward server. Is the app running?")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadData() }, [loadData])
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000)
@@ -41,7 +29,7 @@ export default function RewardsPage() {
     setUnlockingId(siteId)
     try {
       await api.timedUnlock(siteId)
-      loadData()
+      retry()
     } catch (e) {
       console.error(e)
     } finally {
@@ -70,7 +58,7 @@ export default function RewardsPage() {
       {error && (
         <div className="error-banner">
           <p>{error}</p>
-          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+          <button className="btn btn-secondary" onClick={retry}>Retry</button>
         </div>
       )}
 

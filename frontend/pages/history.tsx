@@ -1,34 +1,20 @@
-import { useState, useEffect, useCallback } from 'react'
 import { api, PointTransaction, PointBalance, ActiveUnlock } from '@/lib/api'
+import { useApiData } from '@/lib/useApiData'
 import Layout from '@/components/Layout'
 
 export default function HistoryPage() {
-  const [txs, setTxs] = useState<PointTransaction[]>([])
-  const [balance, setBalance] = useState<PointBalance | null>(null)
-  const [activeUnlocks, setActiveUnlocks] = useState<ActiveUnlock[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, loading, error, retry } = useApiData(async () => {
+    const [txs, balance, activeUnlocks] = await Promise.all([
+      api.getHistory(),
+      api.getBalance(),
+      api.getActiveUnlocks(),
+    ])
+    return { txs, balance, activeUnlocks }
+  })
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [h, b, u] = await Promise.all([
-        api.getHistory(),
-        api.getBalance(),
-        api.getActiveUnlocks(),
-      ])
-      setTxs(h)
-      setBalance(b)
-      setActiveUnlocks(u)
-    } catch {
-      setError("Can't reach the FocusReward server. Is the app running?")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadData() }, [loadData])
+  const txs = data?.txs ?? []
+  const balance = data?.balance ?? null
+  const activeUnlocks = data?.activeUnlocks ?? []
 
   if (loading) {
     return <Layout balance={balance?.balance ?? 0}><p>Loading...</p></Layout>
@@ -39,7 +25,7 @@ export default function HistoryPage() {
       {error && (
         <div className="error-banner">
           <p>{error}</p>
-          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+          <button className="btn btn-secondary" onClick={retry}>Retry</button>
         </div>
       )}
 

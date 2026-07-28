@@ -1,42 +1,31 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { api, Todo, PointBalance } from '@/lib/api'
+import { useApiData } from '@/lib/useApiData'
 import Layout from '@/components/Layout'
 
 // Point values must match src-tauri/src/db/mod.rs (easy=5, medium=10, hard=20)
 
 export default function TasksPage() {
-  const [todos, setTodos] = useState<Todo[]>([])
-  const [balance, setBalance] = useState<PointBalance | null>(null)
+  const { data, loading, error, retry } = useApiData(async () => {
+    const [todos, balance] = await Promise.all([
+      api.getTodos(),
+      api.getBalance(),
+    ])
+    return { todos, balance }
+  })
+
+  const todos = data?.todos ?? []
+  const balance = data?.balance ?? null
+
   const [title, setTitle] = useState('')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [t, b] = await Promise.all([
-        api.getTodos(),
-        api.getBalance(),
-      ])
-      setTodos(t)
-      setBalance(b)
-    } catch {
-      setError("Can't reach the FocusReward server. Is the app running?")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadData() }, [loadData])
 
   const createTask = async () => {
     if (!title.trim()) return
     try {
       await api.createTodo(title.trim(), difficulty)
       setTitle('')
-      loadData()
+      retry()
     } catch (e) {
       console.error(e)
     }
@@ -45,7 +34,7 @@ export default function TasksPage() {
   const completeTask = async (id: string) => {
     try {
       await api.completeTodo(id)
-      loadData()
+      retry()
     } catch (e) {
       console.error(e)
     }
@@ -56,7 +45,7 @@ export default function TasksPage() {
     if (!completed && !confirm('Delete this task?')) return
     try {
       await api.deleteTodo(id)
-      loadData()
+      retry()
     } catch (e) {
       console.error(e)
     }
@@ -71,7 +60,7 @@ export default function TasksPage() {
       {error && (
         <div className="error-banner">
           <p>{error}</p>
-          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+          <button className="btn btn-secondary" onClick={retry}>Retry</button>
         </div>
       )}
 

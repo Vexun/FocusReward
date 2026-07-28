@@ -1,12 +1,19 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { api, RewardSite, PointBalance } from '@/lib/api'
+import { useApiData } from '@/lib/useApiData'
 import Layout from '@/components/Layout'
 
 export default function SettingsPage() {
-  const [sites, setSites] = useState<RewardSite[]>([])
-  const [balance, setBalance] = useState<PointBalance | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, loading, error, retry } = useApiData(async () => {
+    const [sites, balance] = await Promise.all([
+      api.getSites(),
+      api.getBalance(),
+    ])
+    return { sites, balance }
+  })
+
+  const sites = data?.sites ?? []
+  const balance = data?.balance ?? null
 
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
@@ -19,25 +26,6 @@ export default function SettingsPage() {
 
   const [resetMessage, setResetMessage] = useState('')
   const [resettingToken, setResettingToken] = useState(false)
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [s, b] = await Promise.all([
-        api.getSites(),
-        api.getBalance(),
-      ])
-      setSites(s)
-      setBalance(b)
-    } catch {
-      setError("Can't reach the FocusReward server. Is the app running?")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadData() }, [loadData])
 
   const addSite = async () => {
     if (!name.trim() || !url.trim()) return
@@ -52,7 +40,7 @@ export default function SettingsPage() {
       setUrl('')
       setCost('10')
       setDuration('30')
-      loadData()
+      retry()
     } catch (e) {
       console.error(e)
     }
@@ -63,7 +51,7 @@ export default function SettingsPage() {
     if (!confirm('Remove this site?')) return
     try {
       await api.deleteSite(id)
-      loadData()
+      retry()
     } catch (e) {
       console.error(e)
     }
@@ -107,7 +95,7 @@ export default function SettingsPage() {
       {error && (
         <div className="error-banner">
           <p>{error}</p>
-          <button className="btn btn-secondary" onClick={loadData}>Retry</button>
+          <button className="btn btn-secondary" onClick={retry}>Retry</button>
         </div>
       )}
 
