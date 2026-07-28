@@ -87,7 +87,6 @@ export default function SettingsPage() {
     setResetMessage('')
     try {
       const result = await api.resetToken()
-      ;(window as any).__FOCUSREWARD_TOKEN__ = result.token
       setResetMessage('Token reset successfully. Extensions must be re-paired.')
     } catch (e) {
       setResetMessage('Failed to reset token.')

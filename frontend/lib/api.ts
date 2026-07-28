@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core'
+
 export interface Todo {
   id: string
   title: string
@@ -46,12 +48,21 @@ export interface ActiveUnlock {
   expires_at: string
 }
 
+async function getToken(): Promise<string | null> {
+  try {
+    return await invoke<string>('get_auth_token')
+  } catch {
+    const t = typeof window !== 'undefined'
+      ? (window as any).__FOCUSREWARD_TOKEN__
+      : undefined
+    return t ?? null
+  }
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== 'undefined'
-    ? (window as any).__FOCUSREWARD_TOKEN__
-    : undefined;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['X-FocusReward-Token'] = token;
+  const token = await getToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['X-FocusReward-Token'] = token
   const res = await fetch(url, {
     headers,
     ...options,

@@ -2,11 +2,21 @@
 
 use focusreward_lib::config::load_config;
 use focusreward_lib::run;
+use std::path::PathBuf;
+
+struct TokenPath(PathBuf);
+
+#[tauri::command]
+fn get_auth_token(token_path: tauri::State<'_, TokenPath>) -> Result<String, String> {
+    std::fs::read_to_string(&token_path.0)
+        .map(|s| s.trim().to_string())
+        .map_err(|e| format!("failed to read token: {}", e))
+}
 
 fn main() {
     let config = load_config();
     let port = config.port;
-    let auth_token = config.auth_token.clone();
+    let token_path = config.token_path.clone();
 
     std::thread::spawn(move || {
         if let Err(e) = run(config) {
@@ -18,12 +28,10 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .manage(TokenPath(token_path))
+        .invoke_handler(tauri::generate_handler![get_auth_token])
         .setup(move |app| {
             let url = format!("http://127.0.0.1:{}", port);
-            let token_script = format!(
-                "window.__FOCUSREWARD_TOKEN__ = '{}';",
-                auth_token
-            );
 
             let _window = tauri::WebviewWindowBuilder::new(
                 app,
@@ -33,7 +41,6 @@ fn main() {
             .title("FocusReward")
             .inner_size(1024.0, 768.0)
             .resizable(true)
-            .initialization_script(token_script)
             .build()?;
 
             Ok(())
